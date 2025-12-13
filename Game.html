@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Snake Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 10px;
+            overflow: hidden;
+            touch-action: pan-y;
+        }
+
+        .game-container {
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            justify-content: space-between;
+        }
+
+        h1 {
+            color: white;
+            font-size: 2em;
+            margin: 10px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .stats {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 10px 0;
+            width: 100%;
+        }
+
+        .stat-box {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            padding: 8px 15px;
+            border-radius: 10px;
+            color: white;
+            font-size: 0.9em;
+            flex: 1;
+            max-width: 120px;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            font-size: 1.3em;
+            display: block;
+        }
+
+        #score { color: #ffd700; }
+        #level { color: #00ff88; }
+        #speed { color: #00d4ff; }
+
+        .canvas-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        #gameCanvas {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-radius: 10px;
+            background: rgba(0,0,0,0.4);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            transition: border-color 0.3s ease;
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        #gameCanvas.level-up {
+            border-color: #ffd700;
+            animation: pulse-border 0.5s ease-in-out 3;
+        }
+
+        @keyframes pulse-border {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+        }
+
+        .level-up-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #663399;
+            font-size: 1.8em;
+            font-weight: bold;
+            padding: 15px 30px;
+            border-radius: 15px;
+            border: 4px solid white;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            animation: fadeInOut 1.5s ease-in-out;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+        }
+
+        .game-over h2 {
+            color: #ff4444;
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+
+        .game-over p {
+            color: white;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            touch-action: manipulation;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            width: 100%;
+            max-width: 250px;
+            margin: 20px 0 10px 0;
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            border: 3px solid rgba(255,255,255,0.4);
+            color: white;
+            font-size: 1.5em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .control-btn:active {
+            transform: scale(0.9);
+            background: rgba(255,255,255,0.3);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .control-up {
+            grid-column: 2;
+            justify-self: center;
+        }
+
+        .control-left {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .control-down {
+            grid-column: 2;
+            grid-row: 2;
+            justify-self: center;
+        }
+
+        .control-right {
+            grid-column: 3;
+            grid-row: 2;
+        }
+
+        .instructions {
+            color: rgba(255,255,255,0.9);
+            font-size: 0.85em;
+            text-align: center;
+            padding: 0 10px;
+        }
+
+        .instructions p {
+            margin: 3px 0;
+        }
+
+        @media (min-width: 768px) {
+            .controls {
+                display: none;
+            }
+            
+            h1 {
+                font-size: 3em;
+            }
+            
+            .stat-box {
+                font-size: 1.2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div>
+            <h1>🐍 Snake</h1>
+            
+            <div class="stats">
+                <div class="stat-box">
+                    <div>Score</div>
+                    <span class="stat-value" id="score">0</span>
+                </div>
+                <div class="stat-box">
+                    <div>Level</div>
+                    <span class="stat-value" id="level">1</span>
+                </div>
+                <div class="stat-box">
+                    <div>Speed</div>
+                    <span class="stat-value" id="speed">1</span>
+                </div>
+            </div>
+
+            <div class="canvas-wrapper" id="canvasWrapper">
+                <canvas id="gameCanvas" width="400" height="400"></canvas>
+            </div>
+        </div>
+
+        <div>
+            <div class="controls">
+                <div class="control-btn control-up" id="btnUp">▲</div>
+                <div class="control-btn control-left" id="btnLeft">◄</div>
+                <div class="control-btn control-down" id="btnDown">▼</div>
+                <div class="control-btn control-right" id="btnRight">►</div>
+            </div>
+
+            <div class="instructions">
+                <p>🎮 Use buttons or swipe/arrow keys</p>
+                <p>⚡ Speed: 1 → 3 → 5 → 7 every 20 points</p>
+                <p>🪨 Stones appear every 3 levels!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var canvas = document.getElementById('gameCanvas');
+        var ctx = canvas.getContext('2d');
+        var canvasWrapper = document.getElementById('canvasWrapper');
+        
+        var GRID_SIZE = 20;
+        var CELL_SIZE = 20;
+        var INITIAL_SPEED = 1;
+        var SPEED_INCREMENT = 2;
+        var POINTS_PER_LEVEL = 20;
+        var BASE_FRAME_TIME = 500;
+
+        var snake = [{ x: 10, y: 10 }];
+        var apple = { x: 5, y: 5 };
+        var stones = [];
+        var direction = { x: 1, y: 0 };
+        var nextDirection = { x: 1, y: 0 };
+        var gameOver = false;
+        var score = 0;
+        var speed = INITIAL_SPEED;
+        var level = 1;
+        var gameLoop;
+        var frameDelay = BASE_FRAME_TIME;
+        var touchStartX = 0;
+        var touchStartY = 0;
+
+        function generateApple() {
+            var newApple;
+            var maxAttempts = 100;
+            var attempts = 0;
+            
+            do {
+                newApple = {
+                    x: Math.floor(Math.random() * GRID_SIZE),
+                    y: Math.floor(Math.random() * GRID_SIZE)
+                };
+                attempts++;
+            } while ((snake.some(function(segment) {
+                return segment.x === newApple.x && segment.y === newApple.y;
+            }) || stones.some(function(stone) {
+                return stone.x === newApple.x && stone.y === newApple.y;
+            })) && attempts < maxAttempts);
+            
+            return newApple;
+        }
+
+        function generateStones(count) {
+            var newStones = [];
+            for (var i = 0; i < count; i++) {
+                var newStone;
+                var maxAttempts = 100;
+                var attempts = 0;
+                
+                do {
+                    newStone = {
+                        x: Math.floor(Math.random() * GRID_SIZE),
+                        y: Math.floor(Math.random() * GRID_SIZE)
+                    };
+                    attempts++;
+                } while ((snake.some(function(segment) {
+                    return segment.x === newStone.x && segment.y === newStone.y;
+                }) || newStones.some(function(stone) {
+                    return stone.x === newStone.x && stone.y === newStone.y;
+                }) || (apple.x === newStone.x && apple.y === newStone.y)) && attempts < maxAttempts);
+                
+                newStones.push(newStone);
+            }
+            return newStones;
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+            ctx.lineWidth = 1;
+            for (var i = 0; i <= GRID_SIZE; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * CELL_SIZE, 0);
+                ctx.lineTo(i * CELL_SIZE, canvas.height);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(0, i * CELL_SIZE);
+                ctx.lineTo(canvas.width, i * CELL_SIZE);
+                ctx.stroke();
+            }
+        }
+
+        function drawSnake() {
+            snake.forEach(function(segment, index) {
+                var x = segment.x * CELL_SIZE;
+                var y = segment.y * CELL_SIZE;
+                
+                if (index === 0) {
+                    // Head - green top
+                    var gradient = ctx.createRadialGradient(
+                        x + CELL_SIZE / 2, y + CELL_SIZE / 3,
+                        0,
+                        x + CELL_SIZE / 2, y + CELL_SIZE / 3,
+                        CELL_SIZE / 2
+                    );
+                    gradient.addColorStop(0, '#a8ff8c');
+                    gradient.addColorStop(1, '#6dd85f');
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(x + CELL_SIZE / 2, y + CELL_SIZE / 2, CELL_SIZE / 2 - 1, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Yellow belly
+                    var bellyGradient = ctx.createRadialGradient(
+                        x + CELL_SIZE / 2, y + CELL_SIZE * 0.6,
+                        0,
+                        x + CELL_SIZE / 2, y + CELL_SIZE * 0.6,
+                        CELL_SIZE / 3
+                    );
+                    bellyGradient.addColorStop(0, '#fffacd');
+                    bellyGradient.addColorStop(1, '#f0e68c');
+                    ctx.fillStyle = bellyGradient;
+                    ctx.beginPath();
+                    ctx.ellipse(x + CELL_SIZE / 2, y + CELL_SIZE * 0.65, CELL_SIZE / 3, CELL_SIZE / 2.5, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Eyes
+                    ctx.fillStyle = '#333';
+                    ctx.beginPath();
+                    ctx.arc(x + CELL_SIZE * 0.35, y + CELL_SIZE * 0.4, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(x + CELL_SIZE * 0.65, y + CELL_SIZE * 0.4, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Smile
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.arc(x + CELL_SIZE / 2, y + CELL_SIZE * 0.5, 3, 0, Math.PI);
+                    ctx.stroke();
+                    
+                    // Tongue
+                    ctx.fillStyle = '#ff6b6b';
+                    ctx.beginPath();
+                    ctx.moveTo(x + CELL_SIZE / 2, y + CELL_SIZE * 0.55);
+                    ctx.lineTo(x + CELL_SIZE / 2 - 2, y + CELL_SIZE * 0.65);
+                    ctx.lineTo(x + CELL_SIZE / 2 + 2, y + CELL_SIZE * 0.65);
+                    ctx.closePath();
+                    ctx.fill();
+                } else {
+                    // Body segments - green with yellow belly
+                    var bodyGradient = ctx.createRadialGradient(
+                        x + CELL_SIZE / 2, y + CELL_SIZE / 2,
+                        0,
+                        x + CELL_SIZE / 2, y + CELL_SIZE / 2,
+                        CELL_SIZE / 2
+                    );
+                    bodyGradient.addColorStop(0, '#a8ff8c');
+                    bodyGradient.addColorStop(0.6, '#6dd85f');
+                    bodyGradient.addColorStop(1, '#5cc950');
+                    ctx.fillStyle = bodyGradient;
+                    ctx.beginPath();
+                    ctx.arc(x + CELL_SIZE / 2, y + CELL_SIZE / 2, CELL_SIZE / 2 - 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Yellow stripe
+                    ctx.fillStyle = 'rgba(255, 250, 205, 0.7)';
+                    ctx.beginPath();
+                    ctx.ellipse(x + CELL_SIZE / 2, y + CELL_SIZE / 2, CELL_SIZE / 4, CELL_SIZE / 3, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+        }
+
+        function drawApple() {
+            var x = apple.x * CELL_SIZE;
+            var y = apple.y * CELL_SIZE;
+            
+            // Apple body - red gradient
+            var appleGradient = ctx.createRadialGradient(
+                x + CELL_SIZE * 0.4, y + CELL_SIZE * 0.4,
+                0,
+                x + CELL_SIZE / 2, y + CELL_SIZE / 2,
+                CELL_SIZE / 2
+            );
+            appleGradient.addColorStop(0, '#ff6b6b');
+            appleGradient.addColorStop(0.5, '#ff4444');
+            appleGradient.addColorStop(1, '#cc0000');
+            
+            ctx.fillStyle = appleGradient;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = 'rgba(255, 68, 68, 0.5)';
+            ctx.beginPath();
+            ctx.arc(x + CELL_SIZE / 2, y + CELL_SIZE * 0.55, CELL_SIZE / 2.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Apple highlight
+            ctx.fillStyle = 'rgba(255, 200, 200, 0.4)';
+            ctx.beginPath();
+            ctx.arc(x + CELL_SIZE * 0.4, y + CELL_SIZE * 0.45, CELL_SIZE / 6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Stem
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(x + CELL_SIZE / 2, y + CELL_SIZE * 0.3);
+            ctx.lineTo(x + CELL_SIZE * 0.55, y + CELL_SIZE * 0.2);
+            ctx.stroke();
+            
+            // Leaf
+            ctx.fillStyle = '#4CAF50';
+            ctx.beginPath();
+            ctx.ellipse(x + CELL_SIZE * 0.6, y + CELL_SIZE * 0.25, CELL_SIZE / 5, CELL_SIZE / 7, Math.PI / 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Leaf vein
+            ctx.strokeStyle = '#2d7a2e';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x + CELL_SIZE * 0.55, y + CELL_SIZE * 0.25);
+            ctx.lineTo(x + CELL_SIZE * 0.65, y + CELL_SIZE * 0.25);
+            ctx.stroke();
+            
+            ctx.shadowBlur = 0;
+        }
+
+        function drawStones() {
+            stones.forEach(function(stone) {
+                ctx.fillStyle = '#888888';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#444444';
+                ctx.fillRect(
+                    stone.x * CELL_SIZE + 2,
+                    stone.y * CELL_SIZE + 2,
+                    CELL_SIZE - 4,
+                    CELL_SIZE - 4
+                );
+                
+                ctx.fillStyle = '#666666';
+                ctx.fillRect(
+                    stone.x * CELL_SIZE + 4,
+                    stone.y * CELL_SIZE + 4,
+                    CELL_SIZE - 8,
+                    CELL_SIZE - 8
+                );
+            });
+            ctx.shadowBlur = 0;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawGrid();
+            drawStones();
+            drawSnake();
+            drawApple();
+        }
+
+        function showLevelUp() {
+            var levelUpDiv = document.createElement('div');
+            levelUpDiv.className = 'level-up-text';
+            levelUpDiv.textContent = 'LEVEL ' + level + '!';
+            canvasWrapper.appendChild(levelUpDiv);
+            
+            canvas.classList.add('level-up');
+            
+            setTimeout(function() {
+                levelUpDiv.remove();
+                canvas.classList.remove('level-up');
+            }, 1500);
+        }
+
+        function updateScore(newScore) {
+            score = newScore;
+            document.getElementById('score').textContent = score;
+            
+            var newLevel = Math.floor(score / POINTS_PER_LEVEL) + 1;
+            if (newLevel > level) {
+                level = newLevel;
+                document.getElementById('level').textContent = level;
+                
+                speed = INITIAL_SPEED + ((level - 1) * SPEED_INCREMENT);
+                document.getElementById('speed').textContent = speed;
+                frameDelay = Math.max(50, BASE_FRAME_TIME - (speed * 15));
+                
+                if (level % 3 === 0) {
+                    var stonesToAdd = Math.floor(level / 3) * 2;
+                    stones = stones.concat(generateStones(stonesToAdd));
+                }
+                
+                showLevelUp();
+                
+                clearInterval(gameLoop);
+                gameLoop = setInterval(update, frameDelay);
+            }
+        }
+
+        function update() {
+            if (gameOver) return;
+
+            direction = nextDirection;
+
+            var head = snake[0];
+            var newHead = {
+                x: (head.x + direction.x + GRID_SIZE) % GRID_SIZE,
+                y: (head.y + direction.y + GRID_SIZE) % GRID_SIZE
+            };
+
+            if (snake.some(function(segment) {
+                return segment.x === newHead.x && segment.y === newHead.y;
+            })) {
+                endGame();
+                return;
+            }
+
+            if (stones.some(function(stone) {
+                return stone.x === newHead.x && stone.y === newHead.y;
+            })) {
+                endGame();
+                return;
+            }
+
+            snake.unshift(newHead);
+
+            if (newHead.x === apple.x && newHead.y === apple.y) {
+                updateScore(score + 10);
+                apple = generateApple();
+            } else {
+                snake.pop();
+            }
+
+            draw();
+        }
+
+        function endGame() {
+            gameOver = true;
+            clearInterval(gameLoop);
+            
+            var gameOverDiv = document.createElement('div');
+            gameOverDiv.className = 'game-over';
+            gameOverDiv.innerHTML = '<h2>Game Over!</h2><p>Final Score: ' + score + '</p><p>Level Reached: ' + level + '</p><button onclick="resetGame()">Play Again</button>';
+            canvasWrapper.appendChild(gameOverDiv);
+        }
+
+        function resetGame() {
+            snake = [{ x: 10, y: 10 }];
+            apple = generateApple();
+            stones = [];
+            direction = { x: 1, y: 0 };
+            nextDirection = { x: 1, y: 0 };
+            gameOver = false;
+            score = 0;
+            speed = INITIAL_SPEED;
+            level = 1;
+            frameDelay = BASE_FRAME_TIME;
+            
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level;
+            document.getElementById('speed').textContent = speed;
+            
+            var gameOverDiv = canvasWrapper.querySelector('.game-over');
+            if (gameOverDiv) gameOverDiv.remove();
+            
+            clearInterval(gameLoop);
+            gameLoop = setInterval(update, frameDelay);
+            draw();
+        }
+
+        function changeDirection(newDir) {
+            if (gameOver) return;
+            
+            if (newDir.x !== 0 && direction.y === 0) {
+                nextDirection = newDir;
+            } else if (newDir.y !== 0 && direction.x === 0) {
+                nextDirection = newDir;
+            }
+        }
+
+        document.addEventListener('keydown', function(e) {
+            switch(e.key) {
+                case 'ArrowUp':
+                    changeDirection({ x: 0, y: -1 });
+                    e.preventDefault();
+                    break;
+                case 'ArrowDown':
+                    changeDirection({ x: 0, y: 1 });
+                    e.preventDefault();
+                    break;
+                case 'ArrowLeft':
+                    changeDirection({ x: -1, y: 0 });
+                    e.preventDefault();
+                    break;
+                case 'ArrowRight':
+                    changeDirection({ x: 1, y: 0 });
+                    e.preventDefault();
+                    break;
+            }
+        });
+
+        function setupButton(btnId, dir) {
+            var btn = document.getElementById(btnId);
+            btn.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                changeDirection(dir);
+            });
+            btn.addEventListener('click', function() {
+                changeDirection(dir);
+            });
+        }
+
+        setupButton('btnUp', { x: 0, y: -1 });
+        setupButton('btnDown', { x: 0, y: 1 });
+        setupButton('btnLeft', { x: -1, y: 0 });
+        setupButton('btnRight', { x: 1, y: 0 });
+
+        canvas.addEventListener('touchstart', function(e) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        });
+
+        canvas.addEventListener('touchend', function(e) {
+            var touchEndX = e.changedTouches[0].clientX;
+            var touchEndY = e.changedTouches[0].clientY;
+            
+            var deltaX = touchEndX - touchStartX;
+            var deltaY = touchEndY - touchStartY;
+            
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                if (deltaX > 30) {
+                    changeDirection({ x: 1, y: 0 });
+                } else if (deltaX < -30) {
+                    changeDirection({ x: -1, y: 0 });
+                }
+            } else {
+                if (deltaY > 30) {
+                    changeDirection({ x: 0, y: 1 });
+                } else if (deltaY < -30) {
+                    changeDirection({ x: 0, y: -1 });
+                }
+            }
+        });
+
+        draw();
+        gameLoop = setInterval(update, frameDelay);
+    </script>
+</body>
+</html>
